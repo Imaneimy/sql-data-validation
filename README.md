@@ -1,101 +1,91 @@
-# 🔍 SQL Data Validation — Quality Reporting
+# SQL Data Validation — Quality Reporting
 
-> **Big Data Testing Project** | Python · SQLite/PostgreSQL · HTML Reports · Data Quality
-
----
-
-## 🇫🇷 Description
-
-Framework de validation de données SQL avec génération automatique de rapports qualité HTML et CSV.
-Simule les contrôles réalisés sur un **DataMart** (dimensions + faits) avec 20 checks couvrant
-complétude, unicité, plage de valeurs, intégrité référentielle et règles métier.
-
-## 🇬🇧 Description
-
-SQL data validation framework with automated HTML/CSV quality report generation.
-Simulates checks performed on a **DataMart** (dimensions + facts) with 20 checks covering
-completeness, uniqueness, value ranges, referential integrity, and business rules.
+Data quality validation framework using SQL against a simulated DataMart (dimensions + facts). Runs 20 checks across completeness, uniqueness, referential integrity, value ranges, and business rules. Generates HTML and CSV quality reports automatically.
 
 ---
 
-## 🗂️ Structure du projet
+## Project structure
 
 ```
 03_sql_data_validation/
 ├── src/
 │   ├── checks/
-│   │   └── sql_checks.py          # SQLQualityChecker — 8 types de contrôles
+│   │   └── sql_checks.py          # SQLQualityChecker — 9 check types
 │   ├── reporters/
-│   │   └── quality_reporter.py    # Génération rapports HTML + CSV
-│   └── run_checks.py              # Orchestrateur — lance tous les checks
+│   │   └── quality_reporter.py    # HTML + CSV report generation
+│   └── run_checks.py              # Entry point — runs all checks
 ├── tests/
-│   └── test_sql_checks.py         # TC-SQL-001 → TC-SQL-015
+│   └── test_sql_checks.py         # TC-SQL-001 to TC-SQL-015
 ├── data/sql/
-│   └── datamart.db                # Base SQLite (générée au lancement)
-├── reports/
-│   ├── quality_report.html        # Rapport visuel (généré)
-│   └── quality_report.csv         # Export CSV (généré)
-└── docs/
+│   └── datamart.db                # SQLite database (generated on run)
+└── reports/
+    ├── quality_report.html        # Visual report (generated)
+    └── quality_report.csv         # CSV export (generated)
 ```
 
 ---
 
-## 🧪 Types de contrôles
-
-| Check | ID | Description |
-|-------|----|----|
-| `NOT NULL` | DQ-001, 002, 009, 011 | Colonnes obligatoires sans NULL |
-| `UNIQUENESS` | DQ-003, 007, 010 | Clés primaires uniques |
-| `VALUE RANGE` | DQ-008, 014, 015 | Montants et quantités positifs |
-| `ALLOWED VALUES` | DQ-004, 016 | Valeurs dans un référentiel |
-| `REFERENTIAL INTEGRITY` | DQ-012, 013 | FK → clés dimension existantes |
-| `COMPLETENESS RATE` | DQ-017 | Taux de remplissage ≥ 95% |
-| `ROW COUNT` | DQ-005, 018 | Volumétrie minimale |
-| `CUSTOM SQL` | DQ-019 | `unit_price × quantity = total_amount` |
-| `PATTERN MATCH` | DQ-020 | Format date `YYYY-MM-DD` |
-
----
-
-## ⚙️ Installation & Exécution
+## Setup
 
 ```bash
 pip install -r requirements.txt
 
-# Lancer les checks + générer les rapports
+# Run all checks and generate reports
 cd src
 python run_checks.py
 
-# Ouvrir le rapport qualité
+# Open the HTML report
 open ../reports/quality_report.html
 
-# Tests unitaires
+# Run unit tests
 pytest tests/ -v
 ```
 
 ---
 
-## 📊 Anomalies dans les données de test
+## Check types
 
-| Anomalie | Check qui la détecte |
-|---|---|
-| `customer_id = NULL` (S009) | DQ-011 |
-| Clé orpheline `C999` (S010) | DQ-012 |
-| `total_amount = -59.98` (S011) | DQ-014 |
-| `status = INVALID_STATUS` (S012) | DQ-016 |
-| `unit_price × quantity ≠ total_amount` | DQ-019 |
-
----
-
-## 📸 Aperçu du rapport HTML
-
-Le rapport HTML généré affiche :
-- Résumé avec compteurs pass/fail et taux de réussite
-- Tableau détaillé avec code couleur (vert = PASS, rouge = FAIL)
-- Badges de sévérité (HIGH / MEDIUM / LOW)
+| Check | IDs | Description |
+|-------|-----|-------------|
+| NOT NULL | DQ-001, 002, 009, 011 | Mandatory columns with no NULL values |
+| UNIQUENESS | DQ-003, 007, 010 | Primary key uniqueness |
+| VALUE RANGE | DQ-008, 014, 015 | Positive amounts and quantities |
+| ALLOWED VALUES | DQ-004, 016 | Values from a defined reference set |
+| REFERENTIAL INTEGRITY | DQ-012, 013 | Foreign keys exist in dimension tables |
+| COMPLETENESS RATE | DQ-017 | Non-null rate >= 95% |
+| ROW COUNT | DQ-005, 018 | Minimum row count threshold |
+| CUSTOM SQL | DQ-019 | unit_price x quantity = total_amount |
+| PATTERN MATCH | DQ-020 | Date format YYYY-MM-DD |
 
 ---
 
-## 👩‍💻 Auteure
+## DataMart schema
 
-**Imane Moussafir** — Ingénieure Data & BI  
-*Projet réalisé dans le cadre d'une candidature Testeur Big Data / Datalake.*
+```
+dim_customer (customer_id, customer_name, country, segment)
+dim_product  (product_id, product_name, category, unit_price)
+fact_sales   (sale_id, customer_id, product_id, quantity, unit_price, total_amount, sale_date, status)
+```
+
+---
+
+## Intentional anomalies in test data
+
+| Row | Anomaly | Check triggered |
+|-----|---------|-----------------|
+| S009 | NULL customer_id | DQ-011 |
+| S010 | Orphan FK C999 | DQ-012 |
+| S011 | total_amount = -59.98 | DQ-014 |
+| S012 | status = INVALID_STATUS | DQ-016 |
+
+---
+
+## Stack
+
+Python / SQLite (compatible PostgreSQL) / Pytest
+
+---
+
+## Author
+
+Imane Moussafir — Data & BI Engineer
