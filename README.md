@@ -1,91 +1,71 @@
-# SQL Data Validation — Quality Reporting
+# sql-data-validation
 
-Data quality validation framework using SQL against a simulated DataMart (dimensions + facts). Runs 20 checks across completeness, uniqueness, referential integrity, value ranges, and business rules. Generates HTML and CSV quality reports automatically.
+At Orange Maroc I spent a lot of time validating data quality manually — checking for nulls, mismatched keys, negative amounts in reports. This project formalizes that into a reusable framework: a set of SQL checks that run against a DataMart and produce an HTML report you can share with the team.
 
----
+The DataMart here is a classic star schema (customers, products, sales facts) simulated in SQLite. Twenty checks run against it, covering the usual suspects: nulls on mandatory columns, primary key uniqueness, foreign key integrity, value ranges, allowed status values, date formats, and a custom business rule that verifies unit_price * quantity = total_amount. The HTML report shows pass/fail per check with severity labels.
 
-## Project structure
+## Structure
 
 ```
-03_sql_data_validation/
-├── src/
-│   ├── checks/
-│   │   └── sql_checks.py          # SQLQualityChecker — 9 check types
-│   ├── reporters/
-│   │   └── quality_reporter.py    # HTML + CSV report generation
-│   └── run_checks.py              # Entry point — runs all checks
-├── tests/
-│   └── test_sql_checks.py         # TC-SQL-001 to TC-SQL-015
-├── data/sql/
-│   └── datamart.db                # SQLite database (generated on run)
-└── reports/
-    ├── quality_report.html        # Visual report (generated)
-    └── quality_report.csv         # CSV export (generated)
+src/
+  checks/
+    sql_checks.py          # SQLQualityChecker class — 9 check types
+  reporters/
+    quality_reporter.py    # generates HTML and CSV from check results
+  run_checks.py            # sets up the DB, runs everything, writes reports
+
+tests/
+  test_sql_checks.py       # 15 unit tests with in-memory SQLite
+
+data/sql/
+  datamart.db              # generated on first run
+
+reports/
+  quality_report.html      # the actual deliverable
+  quality_report.csv
 ```
 
----
-
-## Setup
+## Running it
 
 ```bash
 pip install -r requirements.txt
-
-# Run all checks and generate reports
 cd src
 python run_checks.py
-
-# Open the HTML report
 open ../reports/quality_report.html
+```
 
-# Run unit tests
+For the tests:
+
+```bash
 pytest tests/ -v
 ```
 
----
-
-## Check types
-
-| Check | IDs | Description |
-|-------|-----|-------------|
-| NOT NULL | DQ-001, 002, 009, 011 | Mandatory columns with no NULL values |
-| UNIQUENESS | DQ-003, 007, 010 | Primary key uniqueness |
-| VALUE RANGE | DQ-008, 014, 015 | Positive amounts and quantities |
-| ALLOWED VALUES | DQ-004, 016 | Values from a defined reference set |
-| REFERENTIAL INTEGRITY | DQ-012, 013 | Foreign keys exist in dimension tables |
-| COMPLETENESS RATE | DQ-017 | Non-null rate >= 95% |
-| ROW COUNT | DQ-005, 018 | Minimum row count threshold |
-| CUSTOM SQL | DQ-019 | unit_price x quantity = total_amount |
-| PATTERN MATCH | DQ-020 | Date format YYYY-MM-DD |
-
----
-
-## DataMart schema
+## The DataMart schema
 
 ```
-dim_customer (customer_id, customer_name, country, segment)
-dim_product  (product_id, product_name, category, unit_price)
-fact_sales   (sale_id, customer_id, product_id, quantity, unit_price, total_amount, sale_date, status)
+dim_customer  (customer_id PK, customer_name, country, segment)
+dim_product   (product_id PK, product_name, category, unit_price)
+fact_sales    (sale_id PK, customer_id FK, product_id FK, quantity, unit_price, total_amount, sale_date, status)
 ```
 
----
+Four rows in fact_sales have intentional problems: a null customer_id (S009), an orphan foreign key C999 (S010), a negative total_amount (S011), and an invalid status value (S012). All four should show up as failures in the report.
 
-## Intentional anomalies in test data
+## Check types available
 
-| Row | Anomaly | Check triggered |
-|-----|---------|-----------------|
-| S009 | NULL customer_id | DQ-011 |
-| S010 | Orphan FK C999 | DQ-012 |
-| S011 | total_amount = -59.98 | DQ-014 |
-| S012 | status = INVALID_STATUS | DQ-016 |
+`SQLQualityChecker` exposes these methods — you can use them on any SQLite-compatible connection:
 
----
+```python
+checker.check_not_null(id, table, column)
+checker.check_uniqueness(id, table, column)
+checker.check_value_range(id, table, column, min, max)
+checker.check_allowed_values(id, table, column, allowed_list)
+checker.check_referential_integrity(id, fact_table, fk_col, dim_table, pk_col)
+checker.check_completeness_rate(id, table, column, min_rate)
+checker.check_row_count(id, table, min_rows)
+checker.check_regex_pattern(id, table, column, pattern)
+checker.check_custom_sql(id, name, table, sql, expected_value)
+```
 
 ## Stack
 
-Python / SQLite (compatible PostgreSQL) / Pytest
-
----
-
-## Author
-
-Imane Moussafir — Data & BI Engineer
+Python, SQLite (PostgreSQL-compatible logic), Pytest
