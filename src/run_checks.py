@@ -163,3 +163,5 @@ if __name__ == "__main__":
     )
     print(f"\n📊 HTML Report: {html_path}")
     print(f"📋 CSV Report:  {csv_path}")
+
+# DQ-021: orders column — no negative quantities
